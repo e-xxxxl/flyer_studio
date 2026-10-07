@@ -1,0 +1,15 @@
+// Self-hosted fonts: bundled by Vite, so they work offline and the PNG export never falls back.
+// Latin subsets only, to keep the offline cache small. Add new fonts here and in src/config/fonts.ts.
+import '@fontsource-variable/noto-serif-display/wdth.css'
+import '@fontsource-variable/archivo/wdth.css'
+import '@fontsource/montserrat/latin-800.css'
+import '@fontsource/gloock/latin-400.css'
+import '@fontsource/abril-fatface/latin-400.css'
+import '@fontsource/playfair-display/latin-700.css'
+import '@fontsource/playfair-display/latin-900.css'
+import '@fontsource/dm-serif-display/latin-400.css'
+import '@fontsource/bodoni-moda/latin-700.css'
+import '@fontsource/bodoni-moda/latin-800.css'
+import '@fontsource/anton/latin-400.css'
+import '@fontsource/bebas-neue/latin-400.css'
+import '@fontsource/instrument-serif/latin-400.css'

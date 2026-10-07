@@ -1,0 +1,7 @@
+node_modules
+dist
+dev-dist
+*.local
+.vite
+public/bgdata
+public/_test.jpg
