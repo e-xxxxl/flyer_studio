@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
 import { DEFAULT_HEADLINE_FONT, DEFAULT_NAME_FONT } from '../config/fonts'
 import type { Aspect } from '../config/layouts'
 import { CUSTOM_THEME_ID, defaultTheme, themes, type Theme, type ThemeColorKey } from '../config/themes'
+import { DEFAULT_TREATMENT } from '../config/treatments'
 import { todayIso } from './date'
 
 export type ThemeColors = Pick<Theme, ThemeColorKey>
@@ -10,6 +10,7 @@ export interface SavedTheme {
   id: string
   label: string
   colors: ThemeColors
+  treatment?: string
 }
 
 export interface PhotoAdjust {
@@ -19,8 +20,14 @@ export interface PhotoAdjust {
   flip: boolean
   /** undefined = layout default */
   overlap?: number
+  /** Crop, as a fraction of the cut-out's own size. */
+  cropTop: number
+  cropRight: number
+  cropBottom: number
+  cropLeft: number
 }
 
+/** Everything that defines one flyer (except the photo pixels). */
 export interface Settings {
   title: string
   name: string
@@ -28,12 +35,15 @@ export interface Settings {
   useCustomDate: boolean
   dateOverride: string
   headlineText: string
+  /** Optional wish or verse printed above the logo. */
+  wish: string
   headlineFont: string
   nameFont: string
   themeId: string
-  /** The colours currently in use when themeId is "custom". */
+  /** The colours in use when themeId is "custom", and a snapshot of the last picked theme. */
   customColors: ThemeColors
-  savedThemes: SavedTheme[]
+  /** Photo blend override; undefined = the template's own treatment. */
+  treatmentId?: string
   aspect: Aspect
   showConfetti: boolean
   showBlur: boolean
@@ -44,70 +54,97 @@ export interface Settings {
 
 export const TITLES = ['', 'Pastor', 'Deacon', 'Deaconess', 'Minister', 'Mrs', 'Mr', 'Dr', 'Evangelist', 'Elder']
 
-export const defaultPhotoAdjust: PhotoAdjust = { scale: 1, offsetX: 0, offsetY: 0, flip: false }
+export const defaultPhotoAdjust: PhotoAdjust = {
+  scale: 1,
+  offsetX: 0,
+  offsetY: 0,
+  flip: false,
+  cropTop: 0,
+  cropRight: 0,
+  cropBottom: 0,
+  cropLeft: 0,
+}
 
 export function colorsOf(t: Theme): ThemeColors {
   const { background, glow, panelFrom, panelTo, headline, name, date, confetti } = t
   return { background, glow, panelFrom, panelTo, headline, name, date, confetti }
 }
 
-export const defaultSettings: Settings = {
-  title: 'Pastor',
-  name: 'Daniel Bentley',
-  date: todayIso(),
-  useCustomDate: false,
-  dateOverride: '',
-  headlineText: 'HAPPY BIRTHDAY',
+/** Options the operator tends to keep between flyers. */
+export interface Prefs {
+  headlineFont: string
+  nameFont: string
+  aspect: Aspect
+  showConfetti: boolean
+  showBlur: boolean
+  skipRemoval: boolean
+}
+
+export const defaultPrefs: Prefs = {
   headlineFont: DEFAULT_HEADLINE_FONT,
   nameFont: DEFAULT_NAME_FONT,
-  themeId: defaultTheme.id,
-  customColors: colorsOf(defaultTheme),
-  savedThemes: [],
   aspect: '4:5',
   showConfetti: true,
   showBlur: true,
-  confettiSeed: 7,
   skipRemoval: false,
-  photo: defaultPhotoAdjust,
 }
 
-export function resolveTheme(s: Settings): Theme {
-  if (s.themeId === CUSTOM_THEME_ID) return { id: CUSTOM_THEME_ID, label: 'Custom', ...s.customColors }
-  const saved = s.savedThemes.find((t) => t.id === s.themeId)
-  if (saved) return { id: saved.id, label: saved.label, ...saved.colors }
-  return themes.find((t) => t.id === s.themeId) ?? defaultTheme
+export interface NewFlyerOptions {
+  themeId?: string
+  wish?: string
+  prefs?: Prefs
+  title?: string
+  name?: string
+  date?: string
 }
 
-const KEY = 'flyer-studio:settings:v1'
-
-function load(): Settings {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return defaultSettings
-    const parsed = JSON.parse(raw) as Partial<Settings>
-    return {
-      ...defaultSettings,
-      ...parsed,
-      // the date should start from today unless the operator typed a custom text
-      date: defaultSettings.date,
-      customColors: { ...defaultSettings.customColors, ...parsed.customColors },
-      photo: { ...defaultPhotoAdjust, ...parsed.photo },
-    }
-  } catch {
-    return defaultSettings
+export function newSettings(o: NewFlyerOptions = {}, savedThemes: SavedTheme[] = []): Settings {
+  const prefs = o.prefs ?? defaultPrefs
+  const base = resolveThemeById(o.themeId ?? defaultTheme.id, savedThemes) ?? defaultTheme
+  return {
+    title: o.title ?? 'Pastor',
+    name: o.name ?? 'Daniel Bentley',
+    date: o.date ?? todayIso(),
+    useCustomDate: false,
+    dateOverride: '',
+    headlineText: 'HAPPY BIRTHDAY',
+    wish: o.wish ?? '',
+    headlineFont: prefs.headlineFont,
+    nameFont: prefs.nameFont,
+    themeId: base.id,
+    customColors: colorsOf(base),
+    aspect: prefs.aspect,
+    showConfetti: prefs.showConfetti,
+    showBlur: prefs.showBlur,
+    confettiSeed: 7,
+    skipRemoval: prefs.skipRemoval,
+    photo: defaultPhotoAdjust,
   }
 }
 
-/** Settings state that remembers the last-used values in localStorage. */
-export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(load)
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(settings))
-    } catch {
-      /* storage may be unavailable; the app still works */
-    }
-  }, [settings])
-  const update = (patch: Partial<Settings>) => setSettings((s) => ({ ...s, ...patch }))
-  return { settings, setSettings, update }
+function resolveThemeById(id: string, savedThemes: SavedTheme[]): Theme | null {
+  const saved = savedThemes.find((t) => t.id === id)
+  if (saved) return { id: saved.id, label: saved.label, treatment: saved.treatment ?? DEFAULT_TREATMENT, ...saved.colors }
+  return themes.find((t) => t.id === id) ?? null
+}
+
+export function resolveTheme(s: Settings, savedThemes: SavedTheme[] = []): Theme {
+  if (s.themeId === CUSTOM_THEME_ID) {
+    return { id: CUSTOM_THEME_ID, label: 'Custom', treatment: DEFAULT_TREATMENT, ...s.customColors }
+  }
+  const found = resolveThemeById(s.themeId, savedThemes)
+  if (found) return found
+  // A deleted saved theme still renders from its snapshot.
+  return { id: CUSTOM_THEME_ID, label: 'Custom', treatment: DEFAULT_TREATMENT, ...s.customColors }
+}
+
+/** Fills in fields that older saved flyers do not have. */
+export function normaliseSettings(raw: Partial<Settings>): Settings {
+  const base = newSettings()
+  return {
+    ...base,
+    ...raw,
+    customColors: { ...base.customColors, ...raw.customColors },
+    photo: { ...defaultPhotoAdjust, ...raw.photo },
+  }
 }

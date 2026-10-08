@@ -2,6 +2,7 @@
 // Latin subsets only, to keep the offline cache small. Add new fonts here and in src/config/fonts.ts.
 import '@fontsource-variable/noto-serif-display/wdth.css'
 import '@fontsource-variable/archivo/wdth.css'
+import '@fontsource-variable/hanken-grotesk/wght.css'
 import '@fontsource/montserrat/latin-800.css'
 import '@fontsource/gloock/latin-400.css'
 import '@fontsource/abril-fatface/latin-400.css'

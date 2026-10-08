@@ -1,4 +1,4 @@
-import { toBlob } from 'html-to-image'
+import { toBlob, toJpeg } from 'html-to-image'
 import { loadFlyerFonts } from './fit'
 
 export const EXPORT_PIXEL_RATIO = 2
@@ -111,4 +111,22 @@ export async function copyPng(blob: Blob): Promise<void> {
     throw new Error('Copying images is not supported in this browser. Use Download instead.')
   }
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+}
+
+/** A small JPEG data URL of the flyer, for saved-flyer lists. Returns undefined if rendering fails. */
+export async function renderFlyerThumb(node: HTMLElement, width: number, height: number): Promise<string | undefined> {
+  try {
+    await loadFlyerFonts()
+    await waitForImages(node)
+    return await toJpeg(node, {
+      width,
+      height,
+      pixelRatio: 360 / width,
+      quality: 0.82,
+      cacheBust: false,
+      style: { transform: 'none', margin: '0' },
+    })
+  } catch {
+    return undefined
+  }
 }

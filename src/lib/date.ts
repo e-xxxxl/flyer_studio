@@ -42,3 +42,29 @@ export function splitCustomDate(text: string): string[] {
     .filter(Boolean)
     .slice(0, 4)
 }
+
+/** "2026-09-20" -> "09-20" */
+export const toMonthDay = (iso: string) => iso.slice(5, 10)
+
+/** The next date (today included) on which a month-day falls, as ISO. Feb 29 falls back to Feb 28. */
+export function nextOccurrence(md: string, from: Date = new Date()): string {
+  const [m, d] = md.split('-').map(Number)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const build = (y: number) => {
+    const day = m === 2 && d === 29 && !(y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 28 : d
+    return `${y}-${pad(m)}-${pad(day)}`
+  }
+  const today = `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`
+  const thisYear = build(from.getFullYear())
+  return thisYear >= today ? thisYear : build(from.getFullYear() + 1)
+}
+
+export function daysUntil(iso: string, from: Date = new Date()): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  const a = Date.UTC(y, m - 1, d)
+  const b = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate())
+  return Math.round((a - b) / 86_400_000)
+}
+
+const MONTH_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+export const monthLong = (m: number) => MONTH_LONG[m - 1] ?? ''

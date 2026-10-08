@@ -7,31 +7,35 @@ interface Props {
   flyer: FlyerProps
   /** Ref to the unscaled flyer node, used for export. */
   flyerRef?: Ref<HTMLDivElement>
-  /** Largest on-screen height in px; the preview shrinks to fit. */
-  maxHeight?: number
+  /**
+   * "width": fill the parent's width and let the height follow (cards, lists).
+   * "contain": fit inside the parent's width AND height (the editor canvas).
+   */
+  fit?: 'width' | 'contain'
   /** Called while the operator drags the canvas, with the move as a fraction of canvas width / height. */
   onPan?: (dx: number, dy: number) => void
+  className?: string
 }
 
 /** Scales the 1080-wide flyer down to whatever room the page has. */
-export function FlyerPreview({ flyer, flyerRef, maxHeight, onPan }: Props) {
+export function FlyerPreview({ flyer, flyerRef, fit = 'width', onPan, className = '' }: Props) {
   const box = useRef<HTMLDivElement>(null)
-  const [avail, setAvail] = useState(0)
+  const [size, setSize] = useState({ w: 0, h: 0 })
   const drag = useRef<{ x: number; y: number } | null>(null)
   const L = layouts[flyer.aspect]
 
   useLayoutEffect(() => {
     const el = box.current
     if (!el) return
-    const update = () => setAvail(el.clientWidth)
+    const update = () => setSize({ w: el.clientWidth, h: el.clientHeight })
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
-  let scale = avail ? avail / L.width : 0.3
-  if (maxHeight) scale = Math.min(scale, maxHeight / L.height)
+  let scale = size.w ? size.w / L.width : 0.2
+  if (fit === 'contain' && size.h) scale = Math.min(scale, size.h / L.height)
 
   const down = (e: PointerEvent<HTMLDivElement>) => {
     if (!onPan || !flyer.photo) return
@@ -50,10 +54,10 @@ export function FlyerPreview({ flyer, flyerRef, maxHeight, onPan }: Props) {
   }
 
   return (
-    <div ref={box} className="flex w-full justify-center">
+    <div ref={box} className={`flex items-center justify-center ${fit === 'contain' ? 'h-full w-full' : 'w-full'} ${className}`}>
       <div
         style={{ width: L.width * scale, height: L.height * scale }}
-        className="relative overflow-hidden rounded-lg shadow-2xl ring-1 ring-black/10"
+        className="relative shrink-0 overflow-hidden rounded-[2px] shadow-[0_0_0_1px_rgba(29,24,21,0.1),0_14px_32px_-18px_rgba(29,24,21,0.45)]"
       >
         <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: L.width, height: L.height }}>
           <Flyer ref={flyerRef} {...flyer} />

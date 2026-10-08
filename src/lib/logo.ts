@@ -128,3 +128,8 @@ export function useLogo(backdropIsLight: boolean, fallbackColor: string): LogoAs
   }, [backdropIsLight, fallbackColor])
   return asset
 }
+
+/** True when public/brand/logo-light.png exists (used on dark artwork instead of recolouring). */
+export async function lightLogoExists(): Promise<boolean> {
+  return (await loadLogoFile(brand.logoLightPath)) !== null
+}

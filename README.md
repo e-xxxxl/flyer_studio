@@ -26,21 +26,56 @@ Other scripts:
 | `npm run preview` | Serves the production build at http://localhost:4173 (use this to test install and offline) |
 | `npm run icons` | Rebuilds the PWA icons from the logo (see below) |
 
+## The app
+
+Five pages and a full-screen editor, on hash URLs (for example `#/flyers`), so any host works with no rewrite rules:
+
+| Page | What it does |
+| --- | --- |
+| Home | Upcoming birthdays, recent flyers, quick template picks |
+| Flyers | Saved flyers (thumbnail, duplicate, delete) |
+| Templates | The six templates as live previews; one tap starts a flyer |
+| Birthdays | The church's birthday list (month and day only); "Make flyer" pre-fills the editor |
+| Settings | Church name, logo variants, default template, default birthday message, install |
+| Editor | Content, Design, Photo and Branding tabs beside a large canvas. Phones get a bottom tab bar with a sheet |
+
+Saved flyers (with the cut-out portrait) live in IndexedDB; birthdays, branding settings, saved colour sets and
+your last-used options live in localStorage. Everything stays on the device.
+
 ## Project layout
 
 ```
 public/brand/        logo.png (+ optional logo-light.png) and the generated PWA icons
-src/config/          brand.ts, themes.ts, layouts.ts, fonts.ts: everything you would edit
-src/components/      Flyer (the artwork), FlyerPreview, Controls, PhotoUploader, PwaBar, ui
-src/lib/             date formatting, name splitting, text fitting, photo cut-out, logo, export, settings
+src/config/          brand.ts, themes.ts, treatments.ts, layouts.ts, fonts.ts: what you would edit
+src/pages/           Home, Flyers, Templates, Birthdays, Settings, Editor (+ useEditor.ts, all editor state)
+src/components/      Shell (navigation), editor/panels, Flyer (the artwork), FlyerPreview, ui (design system)
+src/lib/             dates, name splitting, text fitting, photo cut-out, masks, logo, export, stores, router
 scripts/             icon and model download scripts
 ```
 
-The flyer is one `<Flyer />` component that takes a typed props object (`title`, `name`, `date`,
-`headlineText`, `theme`, `aspect`, `photo`, ...). It is drawn on a 1080 px wide canvas; every position and
-size in `src/config/layouts.ts` is a fraction of the canvas, so all three aspect ratios share one design.
-To make other flyer types later (anniversary, wedding, thanksgiving), change the headline text or add a
-sibling component that reuses the same layers.
+The flyer is one `<Flyer />` component that takes a typed props object. It is drawn on a 1080 px wide canvas;
+every position and size in `src/config/layouts.ts` is a fraction of the canvas, so all three aspect ratios share
+one design. The interface itself uses a small token set in `src/index.css` (warm neutrals, the church maroon as the
+only accent, 4 px spacing grid, Instrument Serif for page titles and Hanken Grotesk for everything else).
+
+## Photo blending
+
+The portrait is blended into the artwork with soft masks, never a plain border. Each template points at a
+*treatment* in `src/config/treatments.ts`; the operator can override it in the Photo tab.
+
+| Treatment | Used by | Look |
+| --- | --- | --- |
+| Editorial | Sunset Gold | Soft bottom fade, gentle side blending, warm haze over the chest |
+| Royal | Royal Purple & Gold | Clean edge, subtle contact shadow, controlled fade |
+| Elegant | Emerald & Cream, Rose & Blush | Feathered on all sides, quiet |
+| Modern | Deep Blue & Silver, Midnight | Crisp angled cut at the base |
+
+A treatment sets feathering per edge (a fraction of the portrait's own size), the angle of the bottom fade, where
+the torso dissolves into the flyer, an optional shadow and how far the haze climbs. The face is never blurred or
+distorted: the top edge is left crisp. If a photo has no transparency (background removal skipped), it is blended
+with wider feathering and a soft oval so no rectangle shows. Zoom, horizontal and vertical position, flip, overlap
+with the headline and crop (under the Crop disclosure) are all in the Photo tab; dragging on the canvas also works.
+To add a treatment, add an entry to `treatments` and point a theme's `treatment` at its id.
 
 ## Branding
 
@@ -71,11 +106,14 @@ background colour in both files if you change the brand colour.
 
 ## Add a theme
 
+Add the object below, plus a `treatment` id (see Photo blending).
+
 Open `src/config/themes.ts` and add an object to the `themes` array:
 
 ```ts
 {
   id: 'ruby-gold',            // unique, no spaces
+  treatment: 'royal',         // photo blend: editorial, royal, elegant or modern
   label: 'Ruby & Gold',       // shown on the theme button
   background: '#1a0408',      // near-black base
   glow: '#e0143c',            // light bleeding in from the left and right edges

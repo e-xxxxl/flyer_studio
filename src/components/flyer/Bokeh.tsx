@@ -6,6 +6,8 @@ interface Props {
   theme: Theme
   width: number
   height: number
+  /** How far the warm haze climbs over the chest (1 = default). */
+  haze?: number
 }
 
 /** Colour the bottom haze settles on. Also used to pick a readable logo colour. */
@@ -15,7 +17,8 @@ export const bokehBase = (t: Theme) => mix(t.panelFrom, t.glow, 0.4)
 const EASE = Array.from({ length: 17 }, (_, i) => i / 16)
 
 /** Soft blurred shapes in front of the person's chest, giving depth. */
-export function Bokeh({ theme, width: W, height: H }: Props) {
+export function Bokeh({ theme, width: W, height: H, haze = 1 }: Props) {
+  const washTop = 0.74 + (1 - haze) * 0.12
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const base = bokehBase(theme)
   const warm = mix(theme.panelFrom, theme.glow, 0.15)
@@ -55,7 +58,7 @@ export function Bokeh({ theme, width: W, height: H }: Props) {
           </radialGradient>
         ))}
       </defs>
-      <rect x="0" y={H * 0.74} width={W} height={H * 0.26} fill={`url(#${uid}wash)`} />
+      <rect x="0" y={H * washTop} width={W} height={H * (1 - washTop)} fill={`url(#${uid}wash)`} />
       {blobs.map((b, i) => (
         <ellipse
           key={i}

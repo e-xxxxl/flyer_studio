@@ -1,6 +1,8 @@
 ﻿export interface Theme {
   id: string
   label: string
+  /** Photo treatment id (see treatments.ts) used by default with this template. */
+  treatment: string
   /** Base background colour (near black). */
   background: string
   /** Colour of the light that bleeds in from the left and right edges. */
@@ -14,7 +16,7 @@
 }
 
 /** Colour fields the operator can edit with pickers. */
-export type ThemeColorKey = Exclude<keyof Theme, 'id' | 'label'>
+export type ThemeColorKey = Exclude<keyof Theme, 'id' | 'label' | 'treatment'>
 
 export const CUSTOM_THEME_ID = 'custom'
 
@@ -22,6 +24,7 @@ export const themes: Theme[] = [
   {
     id: 'sunset-gold',
     label: 'Sunset Gold',
+    treatment: 'editorial',
     background: '#1f0606',
     glow: '#ff4d12',
     panelFrom: '#f7b22e',
@@ -34,6 +37,7 @@ export const themes: Theme[] = [
   {
     id: 'royal-purple',
     label: 'Royal Purple & Gold',
+    treatment: 'royal',
     background: '#14062e',
     glow: '#7b2cff',
     panelFrom: '#e9b23c',
@@ -46,6 +50,7 @@ export const themes: Theme[] = [
   {
     id: 'deep-blue',
     label: 'Deep Blue & Silver',
+    treatment: 'modern',
     background: '#050e26',
     glow: '#1f6cff',
     panelFrom: '#b9c5d6',
@@ -58,6 +63,7 @@ export const themes: Theme[] = [
   {
     id: 'emerald-cream',
     label: 'Emerald & Cream',
+    treatment: 'elegant',
     background: '#04191a',
     glow: '#14b37a',
     panelFrom: '#efdfb4',
@@ -70,6 +76,7 @@ export const themes: Theme[] = [
   {
     id: 'rose-blush',
     label: 'Rose & Blush',
+    treatment: 'elegant',
     background: '#2c0a1c',
     glow: '#ff5c8d',
     panelFrom: '#ffb3c9',
@@ -82,6 +89,7 @@ export const themes: Theme[] = [
   {
     id: 'midnight',
     label: 'Midnight Black & White',
+    treatment: 'modern',
     background: '#060606',
     glow: '#5a5a5a',
     panelFrom: '#dcdcdc',

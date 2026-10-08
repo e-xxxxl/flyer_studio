@@ -1,14 +1,179 @@
 @import 'tailwindcss';
 
-html,
-body,
-#root {
-  height: 100%;
+/*
+ * Design tokens.
+ * The interface is a quiet warm-neutral surface so the flyer is always the loudest thing on screen.
+ * The accent is the church's own maroon (the same value as the default template's name colour).
+ * Spacing follows a 4px grid: 4, 8, 12, 16, 24, 32, 48.
+ */
+@theme {
+  --font-sans: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+
+  --color-ink: #1d1815;
+  --color-ink-2: #5d534c;
+  --color-ink-3: #877d74;
+  --color-line: #e6e1da;
+  --color-line-2: #d2cbc1;
+  --color-paper: #ffffff;
+  --color-wash: #f7f5f1;
+  --color-canvas: #e9e5de;
+  --color-accent: #7a1410;
+  --color-accent-2: #5e0f0b;
+  --color-accent-soft: #f6ece9;
+  --color-danger: #a1261b;
+  --color-ok: #2f6b4a;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 }
 
-body {
-  margin: 0;
-  background: #f6f3ef;
-  color: #231512;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+@layer base {
+  :root {
+    color-scheme: light;
+    --nav-h: 56px;
+    --bottom-nav-h: 60px;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-wash);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+  }
+
+  /* Range sliders: a hairline track with a small square-ish thumb. */
+  input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 36px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type='range']::-webkit-slider-runnable-track {
+    height: 2px;
+    background: var(--color-line-2);
+    border-radius: 1px;
+  }
+  input[type='range']::-moz-range-track {
+    height: 2px;
+    background: var(--color-line-2);
+    border-radius: 1px;
+  }
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    border: 2px solid var(--color-paper);
+    box-shadow: 0 0 0 1px var(--color-line-2);
+    transition: transform 120ms ease;
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    border: 2px solid var(--color-paper);
+    box-shadow: 0 0 0 1px var(--color-line-2);
+  }
+  input[type='range']:active::-webkit-slider-thumb {
+    transform: scale(1.12);
+  }
+
+  input[type='color'] {
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
+    border: 1px solid var(--color-line-2);
+    border-radius: var(--radius-md);
+    background: none;
+    cursor: pointer;
+  }
+  input[type='color']::-webkit-color-swatch-wrapper {
+    padding: 3px;
+  }
+  input[type='color']::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+  }
+  input[type='color']::-moz-color-swatch {
+    border: none;
+    border-radius: 3px;
+  }
+
+  /* Thin, unobtrusive scrollbars in side panels. */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-2) transparent;
+  }
+
+
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.anim-rise {
+  animation: rise 180ms ease-out both;
+}
+.anim-fade {
+  animation: fade 140ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

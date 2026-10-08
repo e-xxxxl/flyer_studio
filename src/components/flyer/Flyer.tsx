@@ -1,7 +1,9 @@
-import { useId, type CSSProperties, type Ref } from 'react'
+import { useId, type CSSProperties, type ReactNode, type Ref } from 'react'
 import { brand } from '../../config/brand'
 import { fonts, fontCss, pickHeadlineFont, pickNameFont } from '../../config/fonts'
 import { layouts } from '../../config/layouts'
+import { pickTreatment } from '../../config/treatments'
+import { fadeOut, maskStyle, softOval } from '../../lib/mask'
 import { luminance, mix, rgba } from '../../lib/color'
 import { formatDateLines, splitCustomDate } from '../../lib/date'
 import { baselineOffset, fitFontSize, fontMetrics, useFontsReady } from '../../lib/fit'
@@ -80,6 +82,8 @@ export function Flyer({ ref, ...p }: FlyerProps & { ref?: Ref<HTMLDivElement> })
   const t = p.theme
   const headFont = pickHeadlineFont(p.headlineFont ?? '')
   const nameFont = pickNameFont(p.nameFont ?? '')
+  const treatment = pickTreatment(p.treatmentId ?? t.treatment)
+  const churchName = p.churchName ?? brand.churchName
 
   // ---- headline ----
   const headLines = splitHeadline(p.headlineText || '')
@@ -119,6 +123,24 @@ export function Flyer({ ref, ...p }: FlyerProps & { ref?: Ref<HTMLDivElement> })
   const overlap = photo?.overlap ?? L.photo.overlap
   const photoLeft = (L.photo.centerX + (photo?.offsetX ?? 0)) * W - photoW / 2
   const photoTop = headLastBaseline - overlap * H + (photo?.offsetY ?? 0) * H
+  // Crop: the picture stays put and the visible window shrinks.
+  const cropL = photo?.cropLeft ?? 0
+  const cropR = photo?.cropRight ?? 0
+  const cropT = photo?.cropTop ?? 0
+  const cropB = photo?.cropBottom ?? 0
+  const visW = photoW * (1 - cropL - cropR)
+  const visH = photoH * (1 - cropT - cropB)
+  // Edge blending, per template. A photo without transparency (a plain rectangle) gets a wider feather and a soft oval.
+  const rect = !!photo?.rect
+  const fe = treatment.feather
+  const edge = (v: number) => (rect ? Math.max(v, treatment.rect.feather) : v)
+  const edgeMasks: string[] = []
+  if (edge(fe.bottom) > 0) edgeMasks.push(fadeOut(treatment.bottomAngle, edge(fe.bottom)))
+  if (edge(fe.top) > 0) edgeMasks.push(fadeOut(0, edge(fe.top)))
+  if (edge(fe.left) > 0) edgeMasks.push(fadeOut(270, edge(fe.left)))
+  if (edge(fe.right) > 0) edgeMasks.push(fadeOut(90, edge(fe.right)))
+  if (rect) edgeMasks.push(softOval(0.62 - treatment.rect.oval))
+  const canvasFade = treatment.canvasFade ?? { start: L.photo.fadeStart, end: L.photo.fadeEnd }
 
   // ---- name ----
   const nameLines = splitNameLines(p.title, p.name)
@@ -149,7 +171,7 @@ export function Flyer({ ref, ...p }: FlyerProps & { ref?: Ref<HTMLDivElement> })
   const backdropIsLight = luminance(backdrop) > 0.2
   const logoColor = backdropIsLight ? t.name : t.headline
   const logo = useLogo(backdropIsLight, logoColor)
-  const churchLines = brand.logoIncludesName ? [] : splitHeadline(brand.churchName)
+  const churchLines = brand.logoIncludesName ? [] : splitHeadline(churchName)
   const churchSize = L.logo.nameSize * W
   const churchPitch = churchSize * 0.98
   const markW = L.logo.markWidth * W
@@ -157,6 +179,9 @@ export function Flyer({ ref, ...p }: FlyerProps & { ref?: Ref<HTMLDivElement> })
   const logoBottom = H - L.logo.bottom * H
   const churchBlockH = churchLines.length ? churchLines.length * churchPitch + churchSize * 0.35 : 0
   const markTop = logoBottom - churchBlockH - markH
+
+  const wishSize = W * 0.03
+  const wishH = wishSize * 1.22 * 2
 
   const bgStyle: CSSProperties = {
     ...abs,
@@ -257,30 +282,49 @@ export function Flyer({ ref, ...p }: FlyerProps & { ref?: Ref<HTMLDivElement> })
         <path d={panelPath} fill={`url(#${uid}panel)`} />
       </svg>
 
-      {/* 5. celebrant cut-out, fading into the bottom blur */}
+      {/* 5. celebrant cut-out: feathered edges, then dissolving into the bottom haze */}
       <div
         style={{
           ...abs,
           width: W,
           height: H,
-          WebkitMaskImage: `linear-gradient(to bottom, #000 ${L.photo.fadeStart * 100}%, transparent ${L.photo.fadeEnd * 100}%)`,
-          maskImage: `linear-gradient(to bottom, #000 ${L.photo.fadeStart * 100}%, transparent ${L.photo.fadeEnd * 100}%)`,
+          ...maskStyle(`linear-gradient(to bottom, #000 ${canvasFade.start * 100}%, transparent ${canvasFade.end * 100}%)`),
         }}
       >
         <div
           style={{
             position: 'absolute',
-            left: photoLeft,
-            top: photoTop,
-            width: photoW,
-            height: photoH,
-            transform: photo?.flip ? 'scaleX(-1)' : undefined,
+            left: photoLeft + cropL * photoW,
+            top: photoTop + cropT * photoH,
+            width: visW,
+            height: visH,
+            filter: treatment.shadow
+              ? `drop-shadow(0 ${treatment.shadow.y}px ${treatment.shadow.blur}px rgba(0,0,0,${treatment.shadow.opacity}))`
+              : undefined,
           }}
         >
-          {photo ? (
-            <img src={photo.url} alt="" draggable={false} style={{ width: '100%', height: '100%', display: 'block' }} />
-          ) : (
-            <Silhouette color={mix(t.panelFrom, t.name, 0.55)} />
+          {edgeMasks.reduceRight<ReactNode>(
+            (inner, m) => (
+              <div style={{ position: 'absolute', inset: 0, ...maskStyle(m) }}>{inner}</div>
+            ),
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: -cropL * photoW,
+                  top: -cropT * photoH,
+                  width: photoW,
+                  height: photoH,
+                  transform: photo?.flip ? 'scaleX(-1)' : undefined,
+                }}
+              >
+                {photo ? (
+                  <img src={photo.url} alt="" draggable={false} style={{ width: '100%', height: '100%', display: 'block' }} />
+                ) : (
+                  <Silhouette color={mix(t.panelFrom, t.name, 0.55)} />
+                )}
+              </div>
+            </div>,
           )}
         </div>
       </div>
@@ -313,7 +357,7 @@ export function Flyer({ ref, ...p }: FlyerProps & { ref?: Ref<HTMLDivElement> })
       {p.showConfetti && <Confetti seed={p.confettiSeed} color={t.confetti} width={W} height={H} layer="front" />}
 
       {/* 8. foreground blur */}
-      {p.showBlur && <Bokeh theme={t} width={W} height={H} />}
+      {p.showBlur && <Bokeh theme={t} width={W} height={H} haze={treatment.haze} />}
 
       {/* film grain over everything but the logo: hides gradient banding */}
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ ...abs, opacity: 0.16, pointerEvents: 'none' }}>
@@ -323,6 +367,30 @@ export function Flyer({ ref, ...p }: FlyerProps & { ref?: Ref<HTMLDivElement> })
         </filter>
         <rect width="100%" height="100%" filter={`url(#${uid}grain)`} />
       </svg>
+
+      {/* optional wish or verse, above the logo */}
+      {p.wish?.trim() && (
+        <div
+          style={{
+            ...abs,
+            left: W * 0.14,
+            width: W * 0.72,
+            top: markTop - H * 0.012 - wishH,
+            height: wishH,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            textAlign: 'center',
+            ...fontCss(nameFont.spec, 'serif'),
+            fontStretch: undefined,
+            fontSize: wishSize,
+            lineHeight: 1.22,
+            color: logoColor,
+          }}
+        >
+          <span>{p.wish.trim().slice(0, 140)}</span>
+        </div>
+      )}
 
       {/* 9. church logo */}
       {logo && (

@@ -1,6 +1,8 @@
 export interface Cutout {
   url: string
   aspect: number
+  /** True when the image has no transparency (a plain rectangle), so it needs heavier edge blending. */
+  rect: boolean
   /** True when the background was actually removed. */
   removed: boolean
   /** A friendly message when something fell back. */
@@ -142,7 +144,7 @@ export async function processPhoto(file: File, opts: ProcessOptions): Promise<Cu
 
   if (opts.skipRemoval) {
     const t = await trim(base)
-    return { url: t.url, aspect: t.aspect, removed: false }
+    return { url: t.url, aspect: t.aspect, rect: !t.hasAlpha, removed: false }
   }
 
   try {
@@ -159,13 +161,14 @@ export async function processPhoto(file: File, opts: ProcessOptions): Promise<Cu
     })
     markReady()
     const t = await trim(result)
-    return { url: t.url, aspect: t.aspect, removed: true }
+    return { url: t.url, aspect: t.aspect, rect: !t.hasAlpha, removed: true }
   } catch (err) {
     console.error('Background removal failed', err)
     const t = await trim(base)
     return {
       url: t.url,
       aspect: t.aspect,
+      rect: !t.hasAlpha,
       removed: false,
       notice: 'Background removal did not work, so the original photo is shown. Try again, or use a photo that is already cut out.',
     }
